@@ -4,6 +4,7 @@ import json
 import pandas as pd
 from datetime import datetime
 import time
+import plotly.express as px  # Added for pie chart
 
 # Configuration
 FASTAPI_URL = "http://fastapi:8000"  # Docker internal network
@@ -306,7 +307,12 @@ with tab3:
                 )
             with col2:
                 pie_data = feedback_df.set_index('feedback')['count']
-                st.pie_chart(pie_data)
+                fig = px.pie(
+                    names=pie_data.index,
+                    values=pie_data.values,
+                    title="Feedback Pie Chart"
+                )
+                st.plotly_chart(fig, use_container_width=True)
         
         # Recent feedback
         if stats_data.get('recent_feedback'):

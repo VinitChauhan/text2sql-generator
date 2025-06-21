@@ -77,7 +77,7 @@ text2sql-generator/
 
 # Troubleshooting local
 
-To fix this, please follow these steps in your terminal:
+To fix local compilation issues, please follow these steps in your terminal:
 
 Delete the broken virtual environment:
 ```bash

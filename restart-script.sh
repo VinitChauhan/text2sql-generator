@@ -173,13 +173,13 @@ if ! scan_containers "$COMPOSE_CMD"; then
 fi
 
 # Ask for confirmation
-echo
-read -p "Do you want to proceed with restarting all containers? (y/n): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_warning "Operation cancelled by user"
-    exit 0
-fi
+# echo
+# read -p "Do you want to proceed with restarting all containers? (y/n): " -n 1 -r
+# echo
+# if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+#     print_warning "Operation cancelled by user"
+#     exit 0
+# fi
 
 # Step 2: Bring down all containers
 bring_down_containers "$COMPOSE_CMD"

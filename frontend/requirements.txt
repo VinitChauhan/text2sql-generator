@@ -4,3 +4,4 @@ pandas
 plotly
 numpy
 protobuf>=3.20,<5
+plotly
