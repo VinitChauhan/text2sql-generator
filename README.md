@@ -4,6 +4,8 @@ A full-stack application that converts natural language queries into executable 
 
 ## Architecture Flow Diagram
 
+> **Note:** The diagram below is rendered on GitHub and some Markdown viewers. If you can't see the diagram, refer to the static image below.
+
 ```mermaid
 graph TD
     A[User (Streamlit Frontend)] -->|1. Sends NL Query| B[FastAPI Backend]
@@ -18,6 +20,8 @@ graph TD
     B -->|10. Stores Feedback| D
     B -->|11. Stores Feedback| C
 ```
+
+![Architecture Flow Diagram](https://raw.githubusercontent.com/vinitchauhan-ai/text2sql-generator/main/docs/architecture-flow.png)
 
 ## Features
 - Natural language to SQL query generation using LLM (Ollama)
