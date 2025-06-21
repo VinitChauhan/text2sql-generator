@@ -2,27 +2,6 @@
 
 A full-stack application that converts natural language queries into executable SQL using LLMs, with a FastAPI backend, Streamlit frontend, MySQL database, and ChromaDB for vector storage.
 
-## Architecture Flow Diagram
-
-> **Note:** The diagram below is rendered on GitHub and some Markdown viewers. If you can't see the diagram, refer to the static image below.
-
-```mermaid
-graph TD
-    A[User (Streamlit Frontend)] -->|1. Sends NL Query| B[FastAPI Backend]
-    B -->|2. Retrieves Schema| C[MySQL Database]
-    B -->|3. Embeds Query| D[ChromaDB]
-    B -->|4. Calls LLM| E[Ollama LLM API]
-    E -->|5. Returns SQL| B
-    B -->|6. Executes SQL| C
-    C -->|7. Returns Results| B
-    B -->|8. Sends Results| A
-    A -->|9. Feedback| B
-    B -->|10. Stores Feedback| D
-    B -->|11. Stores Feedback| C
-```
-
-![Architecture Flow Diagram](https://raw.githubusercontent.com/vinitchauhan-ai/text2sql-generator/main/docs/architecture-flow.png)
-
 ## Features
 - Natural language to SQL query generation using LLM (Ollama)
 - FastAPI backend for API endpoints
