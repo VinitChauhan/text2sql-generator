@@ -74,6 +74,40 @@ text2sql-generator/
 - Frontend code: `frontend/app.py`
 - Database schema: `init-db/01_init.sql`
 
+
+# Troubleshooting local
+
+To fix this, please follow these steps in your terminal:
+
+Delete the broken virtual environment:
+```bash
+rm -rf /Users/vinitchauhan/AI-Workspace/text2sql-generator/.venv
+```
+
+Recreate the virtual environment:
+```bash
+python3 -m venv /Users/vinitchauhan/AI-Workspace/text2sql-generator/.venv
+```
+
+Activate the virtual environment:
+```bash
+source /Users/vinitchauhan/AI-Workspace/text2sql-generator/.venv/bin/activate
+```
+
+Upgrade pip and install requirements:
+```bash
+python -m ensurepip --upgrade
+python -m pip install --upgrade pip
+pip install -r backend/requirements.txt
+```
+
+After these steps, try running your script again:
+```bash
+python backend/chroma_client.py
+```
+
+
+
 ### Notes
 - The backend and frontend are hot-reloaded in development mode via Docker volumes.
 - All sensitive credentials are managed via the `.env` file.
