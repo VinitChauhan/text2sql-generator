@@ -1,0 +1,78 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: text2sql_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - text2sql_network
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: text2sql_chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+    networks:
+      - text2sql_network
+
+  fastapi:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: text2sql_fastapi
+    ports:
+      - "8001:8000"
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - OLLAMA_HOST=host.docker.internal
+      - OLLAMA_PORT=11434
+    depends_on:
+      - mysql
+      - chroma
+    volumes:
+      - ./backend:/app
+    networks:
+      - text2sql_network
+
+  streamlit:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: text2sql_streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      - FASTAPI_URL=http://fastapi:8000
+    depends_on:
+      - fastapi
+    volumes:
+      - ./frontend:/app
+    networks:
+      - text2sql_network
+
+volumes:
+  mysql_data:
+  chroma_data:
+
+networks:
+  text2sql_network:
+    driver: bridge
