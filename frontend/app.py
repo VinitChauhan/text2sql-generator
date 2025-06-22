@@ -220,7 +220,7 @@ with tab1:
                         value=query_data['generated_sql'],
                         height=100
                     )
-                    comments = st.text_area("Comments (optional):", height=60)
+                    comments = st.text_area("Comments (optional):", height=70)
                     
                     if st.button("Submit Correction"):
                         feedback_data = {
