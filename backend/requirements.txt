@@ -2,12 +2,7 @@ fastapi
 uvicorn
 mysql-connector-python
 chromadb
-sentence-transformers
 requests
 pydantic
-python-multipart
 numpy
-torch
-transformers
 pandas
-protobuf>=3.20,<5

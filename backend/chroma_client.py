@@ -7,8 +7,13 @@ chroma_client = chromadb.HttpClient(
     port=int(os.getenv('CHROMA_PORT', '8000'))
 )
 
+# collections = chroma_client.list_collections()
+
+# for collection in collections:
+#     print(collection.get(collection.name))
+
 # Access an existing collection (e.g., "sql_examples")
-collection = chroma_client.get_collection("sql_examples")
+collection = chroma_client.get_collection("db_schema")
 
 # Example: Read all document IDs in the collection
 result = collection.get()

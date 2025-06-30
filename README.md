@@ -108,6 +108,51 @@ python backend/chroma_client.py
 
 
 
+## Major Updates (2025)
+
+- **Modularized backend:** Embedding and SQL prompt logic are now in `embedding_generator.py`, `sql_generator.py`, and `prompt_builder.py`.
+- **ChromaDB integration:** Embeddings are validated, tokenized, and always stored as 2D lists. ChromaDB is used for both schema and feedback storage.
+- **Ollama LLM:** SQL generation uses Ollama with prompt templates in `prompt_builder.py`.
+- **Debugging:** Debugpy is enabled for remote debugging in Docker (port 5678). Console logging is added for API calls in the frontend.
+- **Networking:** All services communicate via Docker Compose network. MySQL and ChromaDB are accessed by service name (`mysql`, `chroma`).
+- **Environment:** `.env` file is required for all secrets and service hostnames. Example values:
+  ```env
+  MYSQL_HOST=mysql
+  CHROMA_HOST=chroma
+  OLLAMA_HOST=host.docker.internal
+  ```
+- **Frontend:** Streamlit uses `FASTAPI_URL=http://fastapi:8000` inside Docker. Use `http://localhost:8001` if running Streamlit on host.
+- **Health checks:** `/health` endpoint verifies backend and service status.
+- **Testing ChromaDB:** Use `backend/chroma_client.py` for manual ChromaDB queries from inside the container.
+
+## Usage Tips
+
+- **Start all services:**
+  ```sh
+  docker-compose up --build
+  ```
+- **Access frontend:** [http://localhost:8501](http://localhost:8501)
+- **Access backend:** [http://localhost:8001](http://localhost:8001)
+- **Access ChromaDB:** [http://localhost:8000](http://localhost:8000)
+- **Test backend health:**
+  ```sh
+  curl http://localhost:8001/health
+  ```
+- **Test ChromaDB from backend:**
+  ```sh
+  docker-compose exec fastapi python chroma_client.py
+  ```
+- **Debugging:** Attach to port 5678 for remote debugging if needed.
+
+## Troubleshooting
+
+- **MySQL connection errors:** Ensure `MYSQL_HOST=mysql` in `.env` and backend code. Do not use `127.0.0.1` or `localhost` for cross-container DB access.
+- **Frontend-backend connection errors:**
+  - If running both in Docker, use `FASTAPI_URL=http://fastapi:8000`.
+  - If running frontend on host, use `FASTAPI_URL=http://localhost:8001`.
+- **ChromaDB errors:** Ensure ChromaDB is healthy and accessible at `chroma:8000` from backend.
+- **No error logs but connection refused:** Check Docker Compose port mappings and use `docker-compose logs <service>` for details.
+
 ### Notes
 - The backend and frontend are hot-reloaded in development mode via Docker volumes.
 - All sensitive credentials are managed via the `.env` file.

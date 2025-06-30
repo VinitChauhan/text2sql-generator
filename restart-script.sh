@@ -186,7 +186,7 @@ bring_down_containers "$COMPOSE_CMD"
 
 # Step 3: Wait for 5 seconds
 print_status "Waiting 5 seconds before rebuilding..."
-for i in {5..1}; do
+for i in {3..1}; do
     echo -ne "\rWaiting... $i seconds remaining"
     sleep 1
 done

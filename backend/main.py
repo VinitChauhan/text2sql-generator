@@ -10,9 +10,10 @@ import requests
 import json
 import os
 from datetime import datetime
-from sentence_transformers import SentenceTransformer
 import logging
 from contextlib import asynccontextmanager
+from embedding_generator import embed_and_store_schema, get_ollama_embedding
+from sql_generator import generate_sql_with_ollama
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,14 +23,22 @@ logger = logging.getLogger(__name__)
 embedding_model = None
 chroma_client = None
 
+# Debugpy remote debugging
+# if os.getenv("DEBUGPY", "0") == "1":
+#     import debugpy
+#     debugpy.listen(("0.0.0.0", 5678))
+#     print("Waiting for debugger attach...")
+#     debugpy.wait_for_client()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     global embedding_model, chroma_client
     
     # Initialize embedding model
-    logger.info("Loading embedding model...")
-    embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+    # logger.info("Loading embedding model...")
+    # embedding_model_name = os.getenv('EMBEDDING_MODEL', 'nomic-embed-text')
+    # embedding_model = SentenceTransformer(embedding_model_name)
     
     # Initialize ChromaDB client
     logger.info("Connecting to ChromaDB...")
@@ -41,10 +50,13 @@ async def lifespan(app: FastAPI):
     # Create collection if it doesn't exist
     try:
         collection = chroma_client.get_or_create_collection(
-            name="sql_examples",
+            name="db_schema",
             metadata={"description": "SQL query examples for training"}
         )
         logger.info("ChromaDB collection ready")
+        # Embed and store schema at startup
+        embed_and_store_schema(chroma_client, get_mysql_connection, logger)
+        logger.info(f"ChromaDB collection after embed: {collection.get(ids=['mysql_schema'])}")
     except Exception as e:
         logger.error(f"ChromaDB initialization error: {e}")
     
@@ -87,7 +99,7 @@ class DatabaseSchema(BaseModel):
 def get_mysql_connection():
     try:
         connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST', 'localhost'),
+            host=os.getenv('MYSQL_HOST', 'mysql'),
             port=int(os.getenv('MYSQL_PORT', '3306')),
             user=os.getenv('MYSQL_USER', 'app_user'),
             password=os.getenv('MYSQL_PASSWORD', 'app_password'),
@@ -99,56 +111,7 @@ def get_mysql_connection():
         raise HTTPException(status_code=500, detail="Database connection failed")
 
 # Ollama LLM integration
-def generate_sql_with_llama(prompt: str, schema_context: str = "") -> str:
-    ollama_host = os.getenv('OLLAMA_HOST', 'localhost')
-    ollama_port = os.getenv('OLLAMA_PORT', '11434')
-    
-    full_prompt = f"""
-You are an expert SQL query generator. Given a natural language question and database schema, generate a precise SQL query.
-
-Database Schema:
-{schema_context}
-
-Natural Language Question: {prompt}
-
-Generate ONLY the SQL query without any explanation or formatting. The query should be executable and follow MySQL syntax.
-
-SQL Query:"""
-
-    try:
-        response = requests.post(
-            f"http://{ollama_host}:{ollama_port}/api/generate",
-            json={
-                "model": "llama3.2:3b-instruct-q4_0",
-                "prompt": full_prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.1,
-                    "top_p": 0.9,
-                    "max_tokens": 500
-                }
-            },
-            timeout=90
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            sql_query = result.get('response', '').strip()
-            
-            # Clean up the response
-            if sql_query.startswith('```sql'):
-                sql_query = sql_query[6:]
-            if sql_query.endswith('```'):
-                sql_query = sql_query[:-3]
-            
-            return sql_query.strip()
-        else:
-            logger.error(f"Ollama API error: {response.status_code}")
-            raise HTTPException(status_code=500, detail="LLM generation failed")
-            
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Ollama request error: {e}")
-        raise HTTPException(status_code=500, detail="LLM service unavailable")
+generate_sql_with_llama = generate_sql_with_ollama
 
 # API endpoints
 @app.get("/")
@@ -270,11 +233,9 @@ async def submit_feedback(feedback: QueryFeedback):
     """Submit feedback for generated SQL query"""
     try:
         # Store feedback in ChromaDB for training
-        collection = chroma_client.get_collection("sql_examples")
-        
-        # Create embedding for the natural language query
-        embedding = embedding_model.encode([feedback.natural_language]).tolist()[0]
-        
+        collection = chroma_client.get_collection("db_schema")
+        # Create embedding for the natural language query using Ollama
+        embedding = get_ollama_embedding(feedback.natural_language, logger=logger)
         # Prepare metadata
         metadata = {
             "query_id": feedback.query_id,
@@ -282,12 +243,10 @@ async def submit_feedback(feedback: QueryFeedback):
             "generated_sql": feedback.generated_sql,
             "timestamp": datetime.now().isoformat()
         }
-        
         if feedback.corrected_sql:
             metadata["corrected_sql"] = feedback.corrected_sql
         if feedback.comments:
             metadata["comments"] = feedback.comments
-        
         # Store in ChromaDB
         collection.add(
             embeddings=[embedding],
@@ -295,17 +254,14 @@ async def submit_feedback(feedback: QueryFeedback):
             metadatas=[metadata],
             ids=[feedback.query_id]
         )
-        
         # Also store in MySQL for structured querying
         connection = get_mysql_connection()
         cursor = connection.cursor()
-        
         insert_query = """
         INSERT INTO query_feedback 
         (query_id, natural_language, generated_sql, feedback, corrected_sql, comments, created_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
-        
         cursor.execute(insert_query, (
             feedback.query_id,
             feedback.natural_language,
@@ -315,12 +271,9 @@ async def submit_feedback(feedback: QueryFeedback):
             feedback.comments,
             datetime.now()
         ))
-        
         connection.commit()
         connection.close()
-        
         return {"message": "Feedback submitted successfully", "query_id": feedback.query_id}
-        
     except Exception as e:
         logger.error(f"Feedback submission error: {e}")
         raise HTTPException(status_code=500, detail="Failed to submit feedback")
@@ -371,7 +324,7 @@ async def get_feedback_stats():
 async def get_similar_queries(query_id: str, limit: int = 5):
     """Get similar queries from ChromaDB"""
     try:
-        collection = chroma_client.get_collection("sql_examples")
+        collection = chroma_client.get_collection("db_schema")
         
         # Get the original query
         results = collection.get(ids=[query_id])
