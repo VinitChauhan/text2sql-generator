@@ -68,8 +68,8 @@ def get_ollama_embedding(text, ollama_host=None, ollama_port=None, model=None, l
         if logger:
             logger.info(f"\n Sending embedding request to {url} with payload: {payload}")
         response = requests.post(url, json=payload, timeout=30)
-        if logger:
-            logger.info(f"\n Ollama embedding response: {response.status_code} {response.text}")
+        # if logger:
+        #     logger.info(f"\n Ollama embedding response: {response.status_code} {response.text}")
         response.raise_for_status()
         result = response.json()
         return result["embedding"]

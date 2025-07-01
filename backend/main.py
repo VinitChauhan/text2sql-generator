@@ -137,26 +137,20 @@ async def get_database_schema():
     try:
         connection = get_mysql_connection()
         cursor = connection.cursor(dictionary=True)
-        
         # Get all tables
         cursor.execute("SHOW TABLES")
         tables = cursor.fetchall()
-        
         schema_info = []
         for table in tables:
             table_name = list(table.values())[0]
-            
             # Get table structure
             cursor.execute(f"DESCRIBE {table_name}")
             columns = cursor.fetchall()
-            
             schema_info.append({
                 "table_name": table_name,
                 "columns": columns
             })
-        
         return {"tables": schema_info}
-        
     except Error as e:
         logger.error(f"Schema retrieval error: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve schema")
@@ -168,18 +162,41 @@ async def get_database_schema():
 async def generate_sql(request: TextToSQLRequest):
     """Generate SQL query from natural language"""
     try:
-        # Get database schema for context
-        schema_response = await get_database_schema()
-        schema_context = ""
+        # Check if the request.text already exists in the feedback table
+        connection = get_mysql_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+           "SELECT generated_sql, query_id FROM query_feedback WHERE natural_language = %s AND feedback = %s ORDER BY created_at DESC LIMIT 1",
+             (request.text, "thumbs_up")
+        )
+        row = cursor.fetchone()
+        connection.close()
+        if row:
+            return {
+                "query_id": row["query_id"],
+                "natural_language": request.text,
+                "generated_sql": row["generated_sql"],
+                "schema_context": ""
+            }
         
-        for table in schema_response["tables"]:
-            schema_context += f"\nTable: {table['table_name']}\n"
-            for column in table["columns"]:
-                schema_context += f"  - {column['Field']} ({column['Type']})\n"
+        # In case if not exist in feed back table then Get database schema for context
+        # schema_response = await get_database_schema()
+        schema_context = ""
+        collection = chroma_client.get_collection("db_schema")
+        docs = collection.get(ids=['mysql_schema'])
+        if  docs['documents']:
+            schema_context = docs['documents'][0]
+        else:
+            logger.info("No schema embedding found in ChromaDB")
+
+        # Embed and store schema at startup        
+        # for table in schema_response["tables"]:
+        #     schema_context += f"\nTable: {table['table_name']}\n"
+        #     for column in table["columns"]:
+        #         schema_context += f"  - {column['Field']} ({column['Type']})\n"
         
         # Generate SQL using Llama
         generated_sql = generate_sql_with_llama(request.text, schema_context)
-        
         # Create query ID for tracking
         query_id = f"query_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         
@@ -189,7 +206,6 @@ async def generate_sql(request: TextToSQLRequest):
             "generated_sql": generated_sql,
             "schema_context": schema_context
         }
-        
     except Exception as e:
         logger.error(f"SQL generation error: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate SQL")
@@ -201,10 +217,8 @@ async def execute_sql(request: SQLExecutionRequest):
     try:
         connection = get_mysql_connection()
         cursor = connection.cursor(dictionary=True)
-        
         # Execute the query
         cursor.execute(request.query)
-        
         # Handle different query types
         if request.query.strip().upper().startswith('SELECT'):
             results = cursor.fetchall()
@@ -220,7 +234,6 @@ async def execute_sql(request: SQLExecutionRequest):
                 "message": f"Query executed successfully. Affected rows: {cursor.rowcount}",
                 "affected_rows": cursor.rowcount
             }
-            
     except Error as e:
         logger.error(f"SQL execution error: {e}")
         raise HTTPException(status_code=400, detail=f"SQL execution failed: {str(e)}")
