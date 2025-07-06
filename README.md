@@ -28,10 +28,15 @@ text2sql-generator/
 └── README.md
 ```
 
-## Application sample screenshot
+## Application Sample Screenshot
 
-[text](backend/main.py)
+![Text2SQL Generator Screenshot]
 
+(docs/screenshot-1.png)
+
+(docs/screenshot-2.png)
+
+(docs/screenshot-3.png)
 
 
 ## Getting Started
