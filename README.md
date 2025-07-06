@@ -32,11 +32,14 @@ text2sql-generator/
 
 ![Text2SQL Generator Screenshot]
 
-(docs/screenshot-1.png)
+![image](https://github.com/user-attachments/assets/98d61e10-d474-40e4-8c28-b658da1487f0)
 
-(docs/screenshot-2.png)
 
-(docs/screenshot-3.png)
+![image](https://github.com/user-attachments/assets/3689c353-5d27-4f16-9f63-277534197b5b)
+
+
+![image](https://github.com/user-attachments/assets/404aa63f-d24e-4867-8afc-a24871c25289)
+
 
 
 
