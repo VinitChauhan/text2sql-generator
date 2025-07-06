@@ -28,6 +28,12 @@ text2sql-generator/
 └── README.md
 ```
 
+## Application sample screenshot
+
+[text](backend/main.py)
+
+
+
 ## Getting Started
 
 ### Prerequisites
