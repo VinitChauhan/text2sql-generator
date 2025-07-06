@@ -39,6 +39,7 @@ text2sql-generator/
 (docs/screenshot-3.png)
 
 
+
 ## Getting Started
 
 ### Prerequisites
